@@ -227,3 +227,18 @@ html.native-app{--circle-top:var(--safe-area-inset-top,env(safe-area-inset-top,0
 html:not(.native-app) #sidebar-toggle,html:not(.native-app) #sidebar-close,
 html:not(.native-app) .sidebar-backdrop{display:none}
 html:not(.native-app) .shell .sidebar{position:relative;inset:auto;transform:none;width:235px;padding:20px 16px;border-right:2px solid #aebda7;visibility:visible;overflow-y:auto;flex-shrink:0}
+
+/* Project creation stays visible outside the scrolling folder list. */
+.native-app .content-view>.project-add{position:absolute;right:18px;bottom:18px;z-index:6;display:grid;place-items:center;width:60px;height:60px;min-width:60px;min-height:60px;padding:0;border-radius:50%;font-size:36px;line-height:1;box-shadow:0 5px 18px #234b3a40;touch-action:manipulation}
+.native-app .project-add span{transform:translateY(-2px)}
+.native-app .content-view>.projects{padding-bottom:100px}
+
+/* The native app uses the authored light palette in both system themes. */
+html.native-app{color-scheme:only light}
+.native-app button.primary{appearance:none;-webkit-appearance:none;background:#32664e;color:#fff;border-color:#32664e}
+.native-app button.primary:hover,.native-app button.primary:active{background:#254e3b;color:#fff;border-color:#254e3b}
+.native-app #newproject.project-add,.native-app #add.concept-add{background:#32664e;color:#fff;border:1px solid #32664e}
+.native-app #newproject.project-add:active,.native-app #add.concept-add:active{background:#254e3b}
+.native-app .project-add span,.native-app .concept-add span{color:inherit}
+
+.project-options{display:grid;gap:10px}.project-options button{min-height:48px;text-align:left}.project-options .danger{color:#a12e2e;border-color:#d6a6a6}

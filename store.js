@@ -5,6 +5,8 @@ export async function createStore(demo=false){
   const key='circle-demo-v1';let data;try{data=JSON.parse(localStorage.getItem(key))}catch{}if(!data){data={projects:[{id:'welcome',name:'DEMO',owner:'demo',members:['demo']}],nodes:{welcome:sample.map(([name,x,y,size,color,tags,memo],i)=>({id:'seed'+i,name,x,y,size,color,tags,memo}))}}}data.profiles ||= {};let projectListener=null,nodeListener=null,active=null,profileListener=null,presenceListener=null;const sessions=new Map();
   const save=()=>{localStorage.setItem(key,JSON.stringify(data));projectListener?.(structuredClone(data.projects));if(active)nodeListener?.(structuredClone(data.nodes[active]||[]))};
   return {cloud:false,
+ async renameProject(id,name,uid){const p=data.projects.find(p=>p.id===id);if(!p||p.owner!==uid)throw Error('소유자만 수정할 수 있습니다.');if(!name||name.length>60)throw Error('프로젝트 이름은 1~60자로 입력하세요.');p.name=name;save()},
+ async deleteProject(id,uid){const p=data.projects.find(p=>p.id===id);if(!p||p.owner!==uid)throw Error('소유자만 삭제할 수 있습니다.');data.projects=data.projects.filter(p=>p.id!==id);delete data.nodes[id];save()},
  watchProfile(uid,cb){profileListener=cb;queueMicrotask(()=>{if(profileListener===cb)cb(data.profiles[uid]||null)});return()=>{if(profileListener===cb)profileListener=null}},
  async saveProfile(uid,profile){data.profiles[uid]=normalizeProfile(profile);localStorage.setItem(key,JSON.stringify(data));profileListener?.(structuredClone(data.profiles[uid]))},
  watchPresence(pid,cb){presenceListener=cb;queueMicrotask(()=>{if(presenceListener===cb)cb([...sessions.values()])});return()=>{if(presenceListener===cb)presenceListener=null}},
@@ -15,6 +17,23 @@ export async function createStore(demo=false){
  const {core,auth,fs}=window.CircleFirebaseSDK||await (async()=>{const [core,auth,fs]=await Promise.all([import('https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js'),import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js'),import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js')]);return {core,auth,fs}})();
  const app=core.initializeApp(window.CIRCLE_FIREBASE_CONFIG),a=window.CircleNative?.isNative?auth.initializeAuth(app,{persistence:auth.indexedDBLocalPersistence}):auth.getAuth(app),db=fs.getFirestore(app),projectRef=id=>fs.doc(db,'projects',id),nodeRef=(pid,id)=>fs.doc(db,'projects',pid,'nodes',id);
  return {cloud:true,
+ async renameProject(id,name){if(!name||name.length>60)throw Error('프로젝트 이름은 1~60자로 입력하세요.');await fs.runTransaction(db,async tx=>{const snap=await tx.get(projectRef(id));if(!snap.exists()||snap.data().owner!==a.currentUser.uid)throw Error('소유자만 수정할 수 있습니다.');if(snap.data().deleting)throw Error('삭제 중인 프로젝트입니다.');tx.update(projectRef(id),{name})})},
+ async deleteProject(id){
+  // Lock writes and revoke the invitation before draining subcollections.
+  const exists=await fs.runTransaction(db,async tx=>{
+   const snap=await tx.get(projectRef(id));if(!snap.exists())return false;
+   if(snap.data().owner!==a.currentUser.uid)throw Error('소유자만 삭제할 수 있습니다.');
+   if(snap.data().inviteCode)tx.delete(fs.doc(db,'invites',snap.data().inviteCode));
+   tx.update(projectRef(id),{deleting:true,inviteCode:''});return true;
+  });
+  if(!exists)return;
+  for(const collection of ['nodes','presence']){
+   while(true){const snapshot=await fs.getDocs(fs.query(fs.collection(db,'projects',id,collection),fs.limit(100)));if(snapshot.empty)break;
+    const batch=fs.writeBatch(db);snapshot.docs.forEach(doc=>batch.delete(doc.ref));await batch.commit();
+   }
+  }
+  await fs.deleteDoc(projectRef(id));
+ },
  watchProfile(uid,cb,error){return fs.onSnapshot(fs.doc(db,'users',uid),s=>cb(s.exists()?s.data():null),error)},
  saveProfile(uid,profile){if(uid!==a.currentUser?.uid)throw Error('본인의 프로필만 수정할 수 있습니다.');return fs.setDoc(fs.doc(db,'users',uid),{...normalizeProfile(profile),updatedAt:fs.serverTimestamp()})},
  watchPresence(pid,cb,error){return fs.onSnapshot(fs.collection(db,'projects',pid,'presence'),{includeMetadataChanges:true},s=>cb(s.docs.map(d=>({...d.data(),id:d.id})),s.metadata.fromCache),error)},
