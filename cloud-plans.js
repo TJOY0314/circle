@@ -1,29 +1,17 @@
-import { planState, monthAfter, checkProjectLimit, checkNodeLimit } from './plans.js';
+import { addSlots, checkProjectLimit, checkNodeLimit } from './plans.js';
 
 // Test entitlement only. A production release must replace self-service test
 // grants and quota locks with server-verified Play Billing and server quotas.
 export function cloudPlans({ fs, db, auth, native }) {
- const planRef = uid => fs.doc(db, 'testSubscriptions', uid);
+ const planRef = uid => fs.doc(db, 'testSlots', uid);
  const projectRef = pid => fs.doc(db, 'projects', pid);
  const snapshotData = snap => snap.exists() ? snap.data() : null;
- function requireNative() { if (!native()) throw Error('circle+ 신청은 안드로이드 앱에서 이용해 주세요.'); }
+ function requireNative() { if (!native()) throw Error('슬롯 구매은 안드로이드 앱에서 이용해 주세요.'); }
  return {
-  watchPlan(uid, cb, error) { return fs.onSnapshot(planRef(uid), snap => cb(snapshotData(snap)), error); },
-  async activateTestPlan() {
-   requireNative(); const uid=auth.currentUser.uid;
-   await fs.runTransaction(db, async tx => {
-    const snap=await tx.get(planRef(uid));
-    if(planState(snapshotData(snap)).active)return;
-    tx.set(planRef(uid), {mode:'test', startedAt:fs.serverTimestamp(), expiresAt:fs.Timestamp.fromMillis(monthAfter(Date.now())), autoRenew:true});
-   });
-  },
-  async cancelTestRenewal() {
-   requireNative();
-   await fs.runTransaction(db, async tx => {
-    const ref=planRef(auth.currentUser.uid), snap=await tx.get(ref), plan=snapshotData(snap);
-    if(!plan)return;
-    tx.update(ref,{autoRenew:false,expiresAt:fs.Timestamp.fromMillis(planState(plan).renewsAt)});
-   });
+  watchSlots(uid, cb, error) { return fs.onSnapshot(planRef(uid), snap => cb(snapshotData(snap)), error); },
+  async purchaseTestSlots(id) {
+   requireNative();if(!auth.currentUser)throw Error('로그인해 주세요.');
+   await fs.runTransaction(db,async tx=>{const ref=planRef(auth.currentUser.uid),snap=await tx.get(ref);tx.set(ref,{...addSlots(snapshotData(snap),id),updatedAt:fs.serverTimestamp()})});
   },
   async createProject(name, uid) {
    if(uid!==auth.currentUser.uid)throw Error('로그인 계정을 확인해 주세요.');

@@ -263,3 +263,29 @@ html.native-app{color-scheme:only light}
 #plan-button.subscribed::before{background:#f2cb45;border-color:#a88913}
 .plan-price{display:grid;gap:8px}.plan-price del{color:#76816f;font-size:14px}.plan-price strong{font-size:23px;color:#234b3a}
 .plan-test{padding:8px 12px;background:#fff2bf;border-radius:8px;color:#665111}
+
+/* Permanent test slots, notices and mobile navigation. */
+#plan-button::before{background:#e8b829!important;inset:6px}
+#plan-button span{position:relative;z-index:1;color:white;font:32px/1 sans-serif;font-weight:400}
+#plan-button:disabled{opacity:.5;cursor:default}
+.issue-button{font-size:23px;font-weight:700}
+.slot-products{display:grid;gap:12px;margin:18px 0}
+.slot-products button{display:grid;grid-template-columns:36px 1fr auto;align-items:center;text-align:left;gap:5px 12px;padding:16px;white-space:normal}
+.slot-products button>span:not(.product-shape){grid-column:2/4;font-size:12px}
+.slot-products button b{grid-column:3;grid-row:1}
+.product-shape{display:block;width:26px;height:26px;background:#d9ad24;grid-row:1/3}
+.shape-circle{border-radius:50%}.shape-pentagon{clip-path:polygon(50% 0,100% 38%,81% 100%,19% 100%,0 38%)}
+.mobile-login-brand{display:none}.sidebar-swipe-edge{display:none}
+.feedback-message{overflow-wrap:anywhere}.feedback-card time{font-size:12px;color:#687465}
+.native-app .sidebar-swipe-edge{display:block;position:absolute;left:0;top:0;bottom:0;width:22px;z-index:25;touch-action:none}
+.native-app .sidebar-expanded .sidebar-swipe-edge{display:none}
+.native-app .sidebar{touch-action:pan-y}
+@media(max-width:880px){
+ .mobile-login-brand{display:block;margin-bottom:30px}.mobile-login-brand .brand-icon{width:48px;height:48px}.mobile-login-brand .logo{font-size:32px}
+ .native-app .topbar{padding:4px 12px 8px;min-height:56px;align-content:start;gap:4px}
+ .native-app .topbar-actions{gap:6px}
+ .native-app .workspace>.topbar .topbar-left{order:2;width:100%}
+ .native-app .workspace>.topbar .topbar-actions{order:1;width:100%;justify-content:flex-end}
+ .native-app .topbar-actions #join{order:5;flex-basis:100%}
+ .native-app .login-form{padding-top:76px}
+}
