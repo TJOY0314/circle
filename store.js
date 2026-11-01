@@ -27,6 +27,10 @@ export async function createStore(demo=false){
  watchAccountInquiries(cb,error){return fs.onSnapshot(fs.query(fs.collection(db,'accountInquiries'),fs.orderBy('createdAt','desc')),s=>cb(s.docs.map(d=>({id:d.id,...d.data()}))),error)},
  async publishNotice(title,body){title=String(title||'').trim();body=String(body||'').trim();if(!title||title.length>100||!body||body.length>10000)throw Error('제목은 100자, 내용은 10000자 이내로 입력해 주세요.');await fs.addDoc(fs.collection(db,'notices'),{title,body,publishedAt:fs.serverTimestamp()})},
  async getNotices(){const s=await fs.getDocs(fs.query(fs.collection(db,'notices'),fs.orderBy('publishedAt','desc')));return s.docs.map(d=>({id:d.id,...d.data()}))},
+ watchNotices(cb,error){return fs.onSnapshot(fs.query(fs.collection(db,'notices'),fs.orderBy('publishedAt','desc')),s=>cb(s.docs.map(d=>({id:d.id,...d.data()}))),error)},
+ watchReads(uid,cb,error){return fs.onSnapshot(fs.collection(db,'users',uid,'readingHistory'),s=>cb(s.docs.map(d=>d.id)),error)},
+ markRead(kind,id){if(!['notices','feedback','accountInquiries'].includes(kind))throw Error('잘못된 메뉴입니다.');return fs.setDoc(fs.doc(db,'users',a.currentUser.uid,'readingHistory',kind+'_'+id),{kind,itemId:id,readAt:fs.serverTimestamp()})},
+ deleteMessage(kind,id){if(!['notices','feedback','accountInquiries'].includes(kind))throw Error('잘못된 메뉴입니다.');return fs.deleteDoc(fs.doc(db,kind,id))},
  async isDeveloper(){if(!a.currentUser)return false;const access=await fs.getDoc(fs.doc(db,'developerAccess',a.currentUser.uid));return access.exists()&&access.data().enabled===true},
  async sendFeedback(message,context){
   if(!a.currentUser)throw Error('로그인 후 이슈를 전송할 수 있습니다.');

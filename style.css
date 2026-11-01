@@ -289,3 +289,41 @@ html.native-app{color-scheme:only light}
  .native-app .topbar-actions #join{order:5;flex-basis:100%}
  .native-app .login-form{padding-top:76px}
 }
+/* Compact project toolbar and message folders. */
+.toolbar-container{flex-shrink:0;display:grid;grid-template-rows:1fr;transition:grid-template-rows .22s ease}
+.toolbar-container>.topbar{overflow:hidden;min-height:0}
+.toolbar-container.toolbar-collapsed{grid-template-rows:0fr}
+.toolbar-container.toolbar-collapsed>.topbar{padding-top:0;padding-bottom:0;border:0;visibility:hidden}
+#toolbar-handle{flex-shrink:0;align-self:center;display:grid;place-items:center;width:48px;height:32px;min-height:32px;padding:0;border:0;background:transparent;touch-action:none;z-index:26}
+#toolbar-handle span{width:19px;height:19px;border-radius:50%;background:#6d8468;border:3px solid #edf1e8;box-shadow:0 1px 4px #203c2733}
+#toolbar-handle:focus-visible{outline:2px solid #345c44}
+#notices-button{position:relative}
+#notices-button.has-unread::after{content:'';position:absolute;right:3px;top:3px;width:9px;height:9px;background:#db3939;border:2px solid white;border-radius:50%}
+.admin-folders{display:flex;gap:10px;margin:0 0 24px;flex-wrap:wrap}
+.admin-folders button{flex:1;min-width:100px;text-align:left;padding:16px;background:#edf1e8}
+.admin-folders button[aria-pressed=true]{background:#345e49;color:white}
+[hidden]{display:none!important}
+.message-open{display:block;width:100%;text-align:left;white-space:normal;padding:0;background:transparent;border:0;color:inherit}
+.message-open h3{margin:8px 0;overflow-wrap:anywhere}
+.message-preview{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;line-height:1.6;max-height:4.8em}
+.read-label,.message-more{font-size:12px;color:#536f50}
+.message-more{display:block;margin-top:10px}
+.feedback-card>.danger{margin-top:14px}
+.native-app .login-form{padding-top:32px}
+@media(max-width:880px){
+ .workspace .toolbar-container>.topbar{display:grid;grid-template-columns:44px minmax(0,1fr) 44px 44px 44px;gap:16px 6px;padding:12px;background:#edf1e8;align-items:center}
+ .workspace .topbar .topbar-left,.workspace .topbar .topbar-actions{display:contents}
+ .workspace .topbar #sidebar-toggle{grid-column:1;grid-row:1;background:white;border:0;border-radius:12px}
+ .workspace .topbar .breadcrumb{grid-column:2;grid-row:1;min-width:0;padding:4px 4px 8px;border-bottom:2px solid #bac5b2}
+ .workspace .topbar .breadcrumb small{font-size:10px;display:block}
+ .workspace .topbar .breadcrumb strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+ .workspace .topbar .plan-control{grid-column:3;grid-row:1}
+ .workspace .topbar #notices-button{grid-column:4;grid-row:1}
+ .workspace .topbar #send-issue{grid-column:5;grid-row:1}
+ .workspace .topbar #notices-button,.workspace .topbar #send-issue{width:44px;height:44px;padding:6px;background:white;border:0;border-radius:12px}
+ .workspace .topbar #home{grid-column:1/4;grid-row:2;background:white;white-space:normal}
+ .workspace .topbar #invite{grid-column:4/6;grid-row:2;background:#34634e;color:white;white-space:normal}
+ .workspace .topbar #join{grid-column:1/6;grid-row:2;background:white}
+ .workspace .toolbar-container.toolbar-collapsed>.topbar{padding-top:0;padding-bottom:0;row-gap:0;border:0}
+}
+@media(prefers-reduced-motion:reduce){.toolbar-container{transition:none}}
