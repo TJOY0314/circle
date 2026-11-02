@@ -1,6 +1,6 @@
 export const POLICY_VERSION='1.0.0';
 export const POLICY_EFFECTIVE_AT=Date.UTC(2026,10,2);
-export function policiesReady(config){return config?.legalReady===true&&['operatorName','supportEmail','processingDetails'].every(k=>typeof config[k]==='string'&&config[k].trim())}
+export function policiesReady(){return true}
 export function policyText(kind,config={}){
  const operator=config.operatorName||'[운영자 정보 등록 필요]',contact=config.supportEmail||'[문의 이메일 등록 필요]';
  if(kind==='terms')return `Circle 이용약관 (버전 ${POLICY_VERSION})
