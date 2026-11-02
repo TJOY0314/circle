@@ -26,8 +26,6 @@ export async function createStore(demo=false){
  return withOffline({cloud:true,
  ...cloudPlans({fs,db,auth:a,native:()=>!!window.CircleNative?.isNative}),
  async getDeletionNickname(){const snap=await fs.getDoc(fs.doc(db,'users',a.currentUser.uid));return normalizeProfile(snap.exists()?snap.data():null,a.currentUser).nickname},
- watchRelease(cb,error){return fs.onSnapshot(fs.doc(db,'appConfig','release'),s=>cb(s.exists()?s.data():{}),error)},
- async updateVersion(version){if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('버전은 1.0.0 형식으로 입력해 주세요.');return fs.setDoc(fs.doc(db,'appConfig','release'),{version,updatedAt:fs.serverTimestamp()},{merge:true})},
  async needsConsent(){const u=a.currentUser;if(!u)return false;const saved=await fs.getDoc(fs.doc(db,'consents',u.uid));if(saved.exists())return false;return !u.metadata?.creationTime||Date.parse(u.metadata.creationTime)>=POLICY_EFFECTIVE_AT},
  acceptConsent(){if(!a.currentUser)throw Error('로그인해 주세요.');return fs.setDoc(fs.doc(db,'consents',a.currentUser.uid),{termsVersion:POLICY_VERSION,privacyVersion:POLICY_VERSION,terms:true,privacy:true,age14:true,acceptedAt:fs.serverTimestamp()})},
  async sendAccountInquiry(email,message){email=String(email||'').trim();message=String(message||'').trim();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)throw Error('답변받을 이메일을 확인해 주세요.');if(!message||message.length>4000)throw Error('내용은 1~4000자로 입력해 주세요.');await fs.addDoc(fs.collection(db,'accountInquiries'),{email,message,createdAt:fs.serverTimestamp()})},
