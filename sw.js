@@ -1,4 +1,4 @@
-const CACHE='circle-shell-credit-v1';
+const CACHE='circle-shell-spark-v2';
 const ASSETS=['./','./index.html','./app.js','./style.css','./config.js','./store.js','./offline.js','./plans.js','./cloud-plans.js','./policies.js','./profile.js','./color.js','./messages.js','./circleIcon.png'];
 const SDK=['firebase-app.js','firebase-auth.js','firebase-firestore.js'].map(name=>'https://www.gstatic.com/firebasejs/11.10.0/'+name);
 self.addEventListener('install',event=>event.waitUntil((async()=>{const cache=await caches.open(CACHE);await cache.addAll(ASSETS);await Promise.allSettled(SDK.map(url=>cache.add(url)));await self.skipWaiting()})()));
