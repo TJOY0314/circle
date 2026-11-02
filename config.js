@@ -20,3 +20,4 @@ window.CIRCLE_FIREBASE_CONFIG = {
   appId: "1:978872497885:web:34855f5f0fe0bc057b8d34",
   measurementId: "G-LXB3SJFHFV"
 };
+

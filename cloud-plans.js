@@ -1,45 +1,21 @@
-import { addSlots, checkProjectLimit, checkNodeLimit } from './plans.js';
-
-// Test entitlement only. A production release must replace self-service test
-// grants and quota locks with server-verified Play Billing and server quotas.
-export function cloudPlans({ fs, db, auth, native }) {
- const planRef = uid => fs.doc(db, 'testSlots', uid);
- const projectRef = pid => fs.doc(db, 'projects', pid);
- const snapshotData = snap => snap.exists() ? snap.data() : null;
- function requireNative() { if (!native()) throw Error('슬롯 구매은 안드로이드 앱에서 이용해 주세요.'); }
+import {normalizeProfile} from './profile.js';
+export function cloudPlans({fs,db,auth,native,rpc}){
+ const pendingKey=()=> 'circle-client-rewards-'+auth.currentUser?.uid;
+ const pending=()=>{try{return JSON.parse(localStorage.getItem(pendingKey()))||[]}catch{return []}};
+ const ack=id=>{localStorage.setItem(pendingKey(),JSON.stringify(pending().filter(x=>x!==id)))};
+ const slots={circle:[0,1],squre:[1,0],pentagon:[1,1]}, prices={circle:990,squre:1990,pentagon:2500};
  return {
-  watchSlots(uid, cb, error) { return fs.onSnapshot(planRef(uid), snap => cb(snapshotData(snap)), error); },
-  async purchaseTestSlots(id) {
-   requireNative();if(!auth.currentUser)throw Error('로그인해 주세요.');
-   await fs.runTransaction(db,async tx=>{const ref=planRef(auth.currentUser.uid),snap=await tx.get(ref);tx.set(ref,{...addSlots(snapshotData(snap),id),updatedAt:fs.serverTimestamp()})});
-  },
-  async createProject(name, uid) {
-   if(uid!==auth.currentUser.uid)throw Error('로그인 계정을 확인해 주세요.');
-   const ref=fs.doc(fs.collection(db,'projects'));
-   await fs.runTransaction(db, async tx => {
-    const lock=fs.doc(db,'quotaLocks',uid), revision=await tx.get(lock), plan=await tx.get(planRef(uid));
-    // Read inside the retry callback after acquiring the common revision. If a
-    // competing create commits, Firestore retries and recounts existing data.
-    const projects=await fs.getDocsFromServer(fs.query(fs.collection(db,'projects'),fs.where('owner','==',uid)));
-    checkProjectLimit(projects.size,snapshotData(plan));
-    tx.set(lock,{revision:(revision.exists()?revision.data().revision:0)+1});
-    tx.set(ref,{name,owner:uid,members:[uid],inviteCode:'',createdAt:fs.serverTimestamp()});
-   });
-  },
-  async saveNode(pid,id,fields,isNew) {
-   const node=fs.doc(db,'projects',pid,'nodes',id);
-   if(!isNew)return fs.updateDoc(node,{...fields,updatedAt:fs.serverTimestamp()});
-   await fs.runTransaction(db,async tx=>{
-    const project=await tx.get(projectRef(pid));
-    if(!project.exists()||project.data().deleting)throw Error('사용할 수 없는 프로젝트입니다.');
-    const lock=fs.doc(db,'projects',pid,'quotaLocks','nodes'), revision=await tx.get(lock);
-    const plan=await tx.get(planRef(project.data().owner)), existing=await tx.get(node);
-    if(existing.exists())throw Error('이미 저장된 개념입니다. 다시 열어 확인해 주세요.');
-    const nodes=await fs.getDocsFromServer(fs.collection(db,'projects',pid,'nodes'));
-    checkNodeLimit(nodes.size,snapshotData(plan));
-    tx.set(lock,{revision:(revision.exists()?revision.data().revision:0)+1});
-    tx.set(node,{...fields,updatedAt:fs.serverTimestamp()});
-   });
-  },
+ pendingRewards:pending,ackReward:ack,
+ async requestAccountDeletion(nickname){const user=auth.currentUser;if(!user)throw Error('로그인해 주세요.');const ref=fs.doc(db,'accountDeletionRequests',user.uid);await fs.runTransaction(db,async tx=>{const profile=await tx.get(fs.doc(db,'users',user.uid));if(nickname!==normalizeProfile(profile.exists()?profile.data():null,user).nickname)throw Error('닉네임을 정확히 입력해 주세요.');const existing=await tx.get(ref);if(existing.exists())return;tx.set(ref,{uid:user.uid,email:user.email||'',nickname,status:'pending',requestedAt:fs.serverTimestamp()})});return {requested:true}},
+ async getAccountDeletionRequests(){const result=await fs.getDocs(fs.collection(db,'accountDeletionRequests'));return result.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.requestedAt?.seconds||0)-(a.requestedAt?.seconds||0))},
+ watchSlots(uid,cb,error){return fs.onSnapshot(fs.doc(db,'entitlements',uid),s=>cb(s.exists()?s.data():null),error)},
+ watchCredits(uid,cb,error){return fs.onSnapshot(fs.doc(db,'wallets',uid),s=>cb(s.exists()?s.data().balance:0),error)},
+ async redeemCredits(productId,requestId){const uid=auth.currentUser.uid;if(!slots[productId])throw Error('상품을 확인해 주세요.');const wallet=fs.doc(db,'wallets',uid),ent=fs.doc(db,'entitlements',uid),receipt=fs.doc(db,'creditRedemptions',uid+'_'+requestId);await fs.runTransaction(db,async tx=>{const [w,e,r]=await Promise.all([tx.get(wallet),tx.get(ent),tx.get(receipt)]);if(r.exists())return;const balance=w.exists()?w.data().balance||0:0;if(balance<prices[productId])throw Error('크레딧이 부족합니다.');const old=e.exists()?e.data():{};tx.set(wallet,{balance:balance-prices[productId],updatedAt:fs.serverTimestamp()});tx.set(ent,{projectSlots:(old.projectSlots||0)+slots[productId][0],conceptSlots:(old.conceptSlots||0)+slots[productId][1],updatedAt:fs.serverTimestamp()});tx.set(receipt,{uid,productId,requestId,price:prices[productId],createdAt:fs.serverTimestamp()})})},
+ async watchRewardAd(){if(!native())throw Error('광고는 Android 앱에서 이용해 주세요.');const uid=auth.currentUser.uid,config=(await fs.getDoc(fs.doc(db,'appConfig','release'))).data();if(!config?.adsEnabled||!config.rewardedAdUnitId)throw Error('광고 서비스를 준비 중입니다.');const sessionId=crypto.randomUUID(),result=await window.CircleNative.ads.showRewarded({adUnitId:config.rewardedAdUnitId,sessionId,userId:uid});if(!result.earned)return result;if(auth.currentUser?.uid!==uid)throw Error('광고를 시작한 계정으로 다시 로그인해 주세요.');localStorage.setItem(pendingKey(),JSON.stringify([...pending(),sessionId]));await this.rewardStatus(sessionId);return {...result,sessionId}},
+ async rewardStatus(sessionId){const uid=auth.currentUser.uid,wallet=fs.doc(db,'wallets',uid),receipt=fs.doc(db,'clientRewards',sessionId);await fs.runTransaction(db,async tx=>{const existing=await tx.get(receipt);if(existing.exists()){if(existing.data().uid!==uid)throw Error('잘못된 보상 기록입니다.');return}const current=await tx.get(wallet);tx.set(wallet,{...(current.data()||{}),balance:(current.data()?.balance||0)+500,lastReward:sessionId,updatedAt:fs.serverTimestamp()});tx.set(receipt,{uid,email:auth.currentUser.email||'',amount:500,createdAt:fs.serverTimestamp()})});return {granted:true}},
+ async getCreditAlerts(){const result=await fs.getDocs(fs.query(fs.collection(db,'clientRewards'),fs.where('amount','>',500)));return result.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0))},
+ async importOfflineProject(data){const created=await this.createProject(data.name,auth.currentUser.uid);for(const n of data.nodes)await this.saveNode(created.id,n.id,n,false,true);return created},
+ async createProject(name,uid){if(uid!==auth.currentUser?.uid)throw Error('로그인 계정을 확인해 주세요.');const slotsDoc=await fs.getDoc(fs.doc(db,'entitlements',uid)),owned=await fs.getDocs(fs.query(fs.collection(db,'projects'),fs.where('owner','==',uid)));if(owned.size>=3+(slotsDoc.data()?.projectSlots||0))throw Error('프로젝트 한도를 초과했습니다.');const ref=fs.doc(fs.collection(db,'projects'));await fs.setDoc(ref,{name,owner:uid,members:[uid],inviteCode:'',createdAt:fs.serverTimestamp()});return {id:ref.id}},
+ async saveNode(pid,id,fields,isNew,allowCreate=false){const ref=fs.doc(db,'projects',pid,'nodes',id);if(isNew&&!allowCreate){const project=await fs.getDoc(fs.doc(db,'projects',pid)),owner=project.data()?.owner,ent=await fs.getDoc(fs.doc(db,'entitlements',owner)),nodes=await fs.getDocs(fs.collection(db,'projects',pid,'nodes'));if(nodes.size>=50+50*(ent.data()?.conceptSlots||0))throw Error('개념어 한도를 초과했습니다.');await fs.setDoc(ref,{...fields,updatedAt:fs.serverTimestamp()});return}if(allowCreate)return fs.setDoc(ref,{...fields,updatedAt:fs.serverTimestamp()});return fs.updateDoc(ref,{...fields,updatedAt:fs.serverTimestamp()})}
  };
 }
