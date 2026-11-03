@@ -16,7 +16,9 @@ const native=()=>!!window.CircleNative?.isNative;
 const compact=()=>window.matchMedia('(max-width: 880px)').matches;
 let sidebarOpen;try{const saved=localStorage.getItem('circle-sidebar-open');sidebarOpen=saved===null?!compact():saved==='true'}catch{sidebarOpen=!compact()}
 const colors=['#f3f6ed','#e4edd9','#e4edf1','#f4e8d8','#eee7f2','#f5e3e1'];
-function toast(s){$('#toast').textContent=s;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),3300)}
+function raiseToast(){const el=$('#toast');if(!el.classList.contains('show'))return;if(typeof el.showPopover==='function'){if(el.matches(':popover-open'))el.hidePopover();el.showPopover()}}
+new MutationObserver(raiseToast).observe(modal,{attributes:true,attributeFilter:['open']});
+function toast(s){const el=$('#toast');el.textContent=s;el.classList.add('show');raiseToast();clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.classList.remove('show');if(typeof el.hidePopover==='function'&&el.matches(':popover-open'))el.hidePopover()},3300)}
 async function attempt(fn){try{return await fn()}catch(e){toast(friendlyError(e));console.error(e)}}
 function dialog(title,body,action,onSave,extraActions=''){modal.oncancel=null;modal.onclose=null;modal.setAttribute('aria-label',title);modal.innerHTML=`<form><h2>${esc(title)}</h2>${body}<div class="modal-actions">${extraActions}${action==='닫기'?'':'<button type="button" id="cancel">취소</button>'}<button class="primary">${esc(action)}</button></div></form>`;if($('#cancel'))$('#cancel').onclick=()=>modal.close();modal.querySelector('form').onsubmit=async e=>{e.preventDefault();const b=e.submitter||modal.querySelector('button.primary');b.disabled=true;try{await onSave(new FormData(e.target));modal.close()}catch(err){toast(friendlyError(err))}finally{b.disabled=false}};modal.showModal()}
 function logo(){return '<div class="logo"><img class="brand-icon" src="circleIcon.png" alt="" width="32" height="32">circle<span style="color:#9aaa90">.</span><small class="app-version">v'+esc(releaseConfig.version||'1.0.0')+'</small></div>'}
@@ -92,7 +94,7 @@ function requestConsent(onAccepted,signedIn=false,signup=false){
  let complete=false,busy=false;modal.onclose=null;modal.oncancel=null;
  modal.setAttribute('aria-label','가입 동의');
  const body=['terms','privacy'].map((kind,i)=>'<div class="consent-row"><label><input type="checkbox" id="consent-'+kind+'" required> [필수] '+(i?'개인정보 수집 및 이용에 동의':'이용약관에 동의')+'</label><button type="button" id="details-'+kind+'">자세히 보기</button></div><div id="policy-'+kind+'" class="policy-full" hidden>'+esc(policyText(kind))+'</div>').join('');
- modal.innerHTML='<form id="consent-form"><h2>처음 오셨군요. 가입 동의</h2>'+body+'<label><input type="checkbox" id="consent-age14" name="age14" required> [필수] 만 14세 이상입니다.</label><div class="modal-actions"><button type="button" id="consent-close">닫기</button><button type="submit" id="consent-submit" class="primary" disabled>'+(signup?'계정 생성하기':'동의하고 계속')+'</button></div></form>';
+ modal.innerHTML='<form id="consent-form"><h2>처음 오셨군요. 가입 동의</h2>'+body+'<label class="consent-age"><input type="checkbox" id="consent-age14" name="age14" required> [필수] 만 12세 이상입니다.</label><div class="modal-actions"><button type="button" id="consent-close">닫기</button><button type="submit" id="consent-submit" class="primary" disabled>'+(signup?'계정 생성하기':'동의하고 계속')+'</button></div></form>';
  const checks=['terms','privacy','age14'].map(k=>$('#consent-'+k)),submit=$('#consent-submit'),close=$('#consent-close');
  const ready=()=>checks.every(el=>el.checked),update=()=>{submit.disabled=busy||!ready()};checks.forEach(el=>el.onchange=update);close.onclick=()=>modal.close();
  modal.oncancel=e=>{if(busy)e.preventDefault()};modal.onclose=()=>{modal.onclose=null;if(signedIn&&!complete)attempt(()=>store.logout())};

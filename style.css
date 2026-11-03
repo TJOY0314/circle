@@ -360,3 +360,9 @@ html.native-app{color-scheme:only light}
 #plan-button.credit-text::before{content:none;display:none}
 #plan-button.credit-text #credit-balance{color:inherit;font:inherit}
 @media(max-width:880px){.workspace .toolbar-container>.topbar{grid-template-columns:44px minmax(0,1fr) auto 44px 44px}.plan-control #plan-button.credit-text{width:auto;min-width:0;font-size:12px}}
+
+/* Keep transient messages above modal dialogs through the browser top layer. */
+#toast{inset:auto auto max(25px,env(safe-area-inset-bottom)) 50%;margin:0;border:0;width:max-content;max-width:calc(100vw - 32px);box-sizing:border-box;z-index:2147483647}
+#toast::backdrop{background:transparent;pointer-events:none}
+.consent-age{margin:18px 0}
+#consent-form input[type="checkbox"]{padding:0;align-self:center;flex:0 0 20px}
