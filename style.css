@@ -366,3 +366,12 @@ html.native-app{color-scheme:only light}
 #toast::backdrop{background:transparent;pointer-events:none}
 .consent-age{margin:18px 0}
 #consent-form input[type="checkbox"]{padding:0;align-self:center;flex:0 0 20px}
+
+/* Search scope, persistent tag connections, and toolbar state. */
+.search-inner select{width:auto;flex:0 0 auto;border:0;border-right:1px solid #d6dfd0;border-radius:0;padding:12px 20px 12px 0;background:transparent;color:#345e49;font:inherit;font-size:13px;max-width:90px}
+.search-inner input{flex:1;width:0;min-width:0}
+.tag-row[aria-pressed="true"]{background:#e0ebd9;color:#254b35;font-weight:700}
+#toolbar-handle span{width:20px;height:16px;clip-path:polygon(50% 0,100% 100%,0 100%);border:0;border-radius:0;box-shadow:none;transform:rotate(var(--handle-rotation,0deg));transition:transform .25s ease}
+#signup,#consent-submit{color:#24613c;background:#edf5e9}
+#signup:disabled,#consent-submit:disabled{color:#5a735e}
+@media(prefers-reduced-motion:reduce){#toolbar-handle span{transition:none}}
